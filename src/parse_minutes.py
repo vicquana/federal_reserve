@@ -46,13 +46,25 @@ HEADING_PATTERNS = [
     (re.compile(r"Staff Review of the Economic Situation", re.I), "STAFF_ECSIT"),
     (re.compile(r"Staff Review of( the)? Financial Situation", re.I), "STAFF_FINSIT"),
     (re.compile(r"Staff Economic Outlook", re.I), "STAFF_OUTLOOK"),
-    (re.compile(r"Participants.{0,3}Views? on Current Conditions", re.I), "FOMC_ECON"),
+    # Fed changed the wording mid-2021: "Current Conditions" ->
+    # "Current Economic Conditions" (verified against the raw HTML,
+    # e.g. fomcminutes20210616.htm) -- (?:\w+ )? absorbs that insert.
+    (re.compile(r"Participants.{0,3}Views? on Current (?:\w+ )?Conditions", re.I), "FOMC_ECON"),
     (re.compile(r"Committee Policy Actions?", re.I), "FOMC_POLICY"),
 ]
 
 SIGNATURE_RE = re.compile(
     r"^_+\s*[A-Z][a-zA-Z.]*(\s+[A-Z][a-zA-Z.]*){1,3}\s+"
     r"(Secretary|Deputy Secretary|Assistant Secretary)$"
+)
+
+# The literal opening of the policy directive quote, independent of
+# whichever HTML tag happens to wrap it (<blockquote> normally, but
+# verified absent -- 0 <blockquote> tags -- in fomcminutes20250730.htm,
+# where the same text sits in a plain <p>). Matched as a second,
+# independent trigger for the FOMC_POLICY -> OTHER_MINUTES switch.
+DIRECTIVE_TEXT_RE = re.compile(
+    r'^"?Effective \w+ \d{1,2}, \d{4}, the Federal Open Market Committee directs'
 )
 
 
@@ -74,13 +86,22 @@ def parse_one(path: str) -> list[dict]:
 
     # Some minutes wrap the policy directive/statement quote in <p> tags
     # nested inside <blockquote>; others put raw text directly inside
-    # <blockquote> with no nested <p>. Collect both shapes as ordered
-    # "paragraph nodes", without double-counting a blockquote and its
-    # own nested <p> children.
+    # <blockquote> with no nested <p>. Directive bullet points (e.g.
+    # "Undertake open market operations...") are sometimes a <ul> AS a
+    # child of the blockquote (already covered by the blockquote's own
+    # get_text(), no separate visit needed) and sometimes a standalone
+    # <ul> sibling of a plain <p> with no enclosing blockquote at all
+    # (verified in fomcminutes20250730.htm -- 0 <blockquote> tags in
+    # that file) -- that shape needs its own top-level node or its
+    # text is silently dropped. Collect all these shapes as ordered
+    # "paragraph nodes", without double-counting a blockquote/list and
+    # elements already nested inside one.
     nodes = []
-    for el in article.find_all(["p", "blockquote"]):
+    for el in article.find_all(["p", "blockquote", "ul"]):
         if el.name == "blockquote" and el.find("p"):
             continue  # its <p> children are visited on their own
+        if el.name == "ul" and el.find_parent("blockquote"):
+            continue  # already covered by the parent blockquote's get_text()
         nodes.append(el)
 
     rows = []
@@ -113,7 +134,8 @@ def parse_one(path: str) -> list[dict]:
             continue  # drop title/attendance/preamble before first known heading
 
         is_blockquote = el.name == "blockquote" or el.find_parent("blockquote") is not None
-        if section == "FOMC_POLICY" and not switched_to_other and is_blockquote:
+        is_directive_text = bool(DIRECTIVE_TEXT_RE.match(text))
+        if section == "FOMC_POLICY" and not switched_to_other and (is_blockquote or is_directive_text):
             switched_to_other = True
 
         cur_section = "OTHER_MINUTES" if switched_to_other else section

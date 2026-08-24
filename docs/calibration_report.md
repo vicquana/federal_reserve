@@ -117,6 +117,58 @@ never labeled, since there is no way to know which of "the general
 rule" or "the last-two-meetings anomaly" he would have applied going
 forward.
 
+## Additional bugs found by sweeping the full 1976-2026 gap-fill output
+
+The 32-meeting calibration sample can only catch bugs tied to wording
+that recurs in 2015-2018. Before treating the parser as done, its
+output across **all 93 processed files** (32 calibration + 61
+gap-fill, 2019-2026) was swept for two classes of anomaly: any file
+missing one of the 5 expected sections entirely, and per-section row
+counts falling far outside the typical range. This surfaced three more
+real bugs, none of which the calibration sample could have shown:
+
+1. **Heading wording changed mid-2021**: "Participants' Views on
+   Current Conditions..." became "Participants' Views on Current
+   **Economic** Conditions..." starting with fomcminutes20210616.htm
+   (confirmed by reading the raw HTML). The `FOMC_ECON` heading regex
+   required "Current Conditions" adjacent with nothing in between, so
+   it stopped matching from mid-2021 onward -- section state never
+   left `STAFF_OUTLOOK`, so every 2021 H2+ meeting's true `FOMC_ECON`
+   content (~110 rows/meeting) was silently mislabeled `STAFF_OUTLOOK`
+   instead. Fixed by allowing an optional word between "Current" and
+   "Conditions".
+2. **One document (fomcminutes20250730.htm) has zero `<blockquote>`
+   tags anywhere** -- confirmed by direct grep, vs. every other of the
+   92 other calibration+gap-fill files having at least one. Its policy
+   directive is instead a plain `<p>"Effective July 31, 2025, the
+   Federal Open Market Committee directs...</p>` followed by a
+   standalone `<ul>`. The blockquote-only FOMC_POLICY -> OTHER_MINUTES
+   trigger never fired, so this single meeting's entire vote/directive
+   block (87 rows) stayed mislabeled `FOMC_POLICY`. Fixed by adding a
+   second, independent trigger: the literal directive opening text
+   ("Effective \<date>, the Federal Open Market Committee directs"),
+   matched regardless of which HTML tag wraps it.
+3. **A standalone `<ul>` (not nested inside a `<blockquote>`) was
+   invisible to the parser entirely** -- `article.find_all(['p',
+   'blockquote'])` never visits `<ul>` elements, so a directive's
+   bullet-point list sitting directly under `<div id="article">` (the
+   same fomcminutes20250730.htm case, and structurally possible in any
+   future minutes that format the directive this way) had its text
+   silently dropped rather than merely mislabeled. Fixed by adding
+   `ul` to the node collection, skipping only `<ul>` elements that are
+   already nested inside a visited `<blockquote>` (whose `.get_text()`
+   already includes them, so they're not double-counted).
+
+After these fixes, a full sweep of all 93 files confirmed **every
+file has at least one row in all 5 expected sections**, and
+per-section row counts across the full 1976-2026 gap-fill history now
+fall in tight, unsurprising ranges (`STAFF_ECSIT` 5-11/meeting,
+`FOMC_ECON` 9-19/meeting, etc. -- no more 40-vs-111 or 4-vs-87 style
+outliers). `data/interim/minutes_master.csv` was rebuilt from this
+fixed output and re-passed all of `build_master_minutes.py`'s join
+checks (421 meetings, 20,357 rows, 1976-01-20 through 2026-07-29,
+still no date overlap/gap/unknown-section/duplicate-key issues).
+
 ## Known limitations / follow-ups
 
 - Signature-block filtering (`SIGNATURE_RE`) only fires when the
