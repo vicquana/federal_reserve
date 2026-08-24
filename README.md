@@ -7,37 +7,59 @@ Choices") group-difference analysis comparing FOMC **transcripts**
 and by discussion section (economic situation vs. monetary-policy
 deliberation).
 
+**Headline result so far** (`docs/findings_summary.md`): pooling
+1995-2020, the substantive vocabulary spoken during monetary-policy
+deliberation survives into the official minutes at less than half the
+rate of economic-outlook discussion (3.3% vs. 8.9% bigram survival),
+corroborated independently by raw word-count compression (24.9x vs.
+6.5x). **Monetary-policy deliberation is disclosed far more sparingly
+than economic-outlook discussion.** See that doc for caveats before
+treating this as publication-ready.
+
 ## Data pipeline
 
-```
+```text
 Acosta xlsx (1976-2018 minutes, 1976-2019 transcripts, section-coded)
         │
-        ├── used as ground truth to calibrate a from-scratch parser ──┐
+        ├── used as ground truth to calibrate from-scratch parsers ───┐
         │                                                              │
         ▼                                                              ▼
-raw Fed HTML/PDF (data/raw/)  ──[src/parse_minutes.py]──►  data/interim/*.csv
-        │                                                   (same schema as
-        │                                                    Acosta's xlsx)
-   2019-2026 gap years (no Acosta ground truth)
+raw Fed HTML/PDF (data/raw/) ──[parse_minutes.py /            data/interim/*_parsed.csv
+                                 parse_transcripts.py]──►      (Acosta's schema)
+        │
+   gap years: minutes 2019-2026, transcripts 2020 only (~5yr publication lag)
+
+data/interim/{minutes,transcripts}_master.csv   (Acosta + gap-fill, joined & checked)
+        │
+        ▼  [build_analysis_units.py]  (ECON/POLICY section-group text, per meeting x doctype)
+data/interim/analysis_units.csv
+        │
+        ▼  [build_vocabulary.py]  (bigrams, frequency+breadth filtered, register/procedural excluded)
+data/interim/vocabulary.csv
+        │
+        ▼  [build_count_matrix.py]  (sparse meeting x section x doctype phrase-count matrix)
+data/interim/counts.mtx
+        │
+        ├──[estimate_distinctiveness.py]──► docs/distinctiveness_results.csv (leave-out classifier)
+        └──[estimate_content_survival.py]─► docs/content_survival_results.csv (vocabulary survival rate)
 ```
 
-See `docs/data_provenance.md` for exact sources, URLs, and download
-dates, and `docs/calibration_report.md` for how the parser was
-validated (2015-2018 overlap sample: 0.980 mean section-label
-agreement against Acosta, 20/32 meetings exactly matching — see that
-doc for the 3 known meetings where Acosta's own labels are internally
-inconsistent). Full citations for all data sources and methodology
-this project builds on are in `docs/REFERENCES.md`.
+See `docs/data_provenance.md` for exact sources/URLs/download dates,
+`docs/calibration_report.md` and `docs/transcript_calibration_report.md`
+for how each parser was validated against Acosta and against the raw
+PDFs directly, `docs/transcript_2020_section_coding_limitation.md` for
+the one still-open data-quality gap, and `docs/REFERENCES.md` for full
+citations.
 
 ## Repository layout
 
-```
+```text
 data/
-  external/     Acosta's cleaned xlsx databases (baseline ground truth)
-  raw/          Raw HTML/PDF downloaded from federalreserve.gov
-  interim/      Parser output, same schema as Acosta's xlsx
-src/            Download and parsing scripts
-docs/           Provenance, calibration methodology and results
+  external/     Acosta's cleaned xlsx databases (baseline ground truth; gitignored, re-downloadable)
+  raw/          Raw HTML/PDF downloaded from federalreserve.gov (gitignored, re-downloadable)
+  interim/      Parser/pipeline output (tracked, except two large fully-regeneratable files -- see .gitignore)
+src/            Download, parsing, and analysis scripts (each documents its own reproduction command)
+docs/           Provenance, calibration methodology/results, findings, references
 ```
 
 ## Reproducing
@@ -50,42 +72,60 @@ python3 src/download_fed_minutes.py --dates-file data/raw/minutes_gapfill_dates.
 python3 src/download_fed_minutes.py --dates-file data/raw/minutes_calib_dates.txt --out data/raw/minutes_calib
 python3 src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2020_stems.txt) --out data/raw/transcripts
 
-# 2. Parse minutes HTML into Acosta's target schema
+# 2. Parse raw HTML/PDF into Acosta's target schema
 python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
 python3 src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
+python3 src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
+python3 src/parse_transcripts.py data/raw/transcripts data/interim/transcripts_gapfill_parsed.csv
 
-# 3. Validate the parser against Acosta's ground truth (2015-2018 overlap)
+# 3. Validate parsers against Acosta's ground truth, and Acosta against the primary source
 python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.csv data/external/acosta_minutes.xlsx docs/calibration_results.csv
+python3 src/validate_transcripts_calibration.py data/interim/transcripts_calib_parsed.csv data/external/acosta_transcripts.xlsx docs/transcript_calibration_results.csv
+python3 src/verify_acosta_against_source.py data/raw/transcripts_calib data/external/acosta_transcripts.xlsx docs/transcript_source_verification.csv
+
+# 4. Join Acosta + gap-fill into continuous master tables
+python3 src/build_master_minutes.py data/external/acosta_minutes.xlsx data/interim/minutes_gapfill_parsed.csv data/interim/minutes_master.csv
+python3 src/build_master_transcripts.py data/external/acosta_transcripts.xlsx data/interim/transcripts_gapfill_parsed.csv data/interim/transcripts_master.csv
+
+# 5. Build the analysis dataset: units -> vocabulary -> count matrix
+python3 src/build_analysis_units.py data/interim/minutes_master.csv data/interim/transcripts_master.csv data/interim/analysis_units.csv
+python3 src/build_vocabulary.py data/interim/analysis_units.csv data/interim/vocabulary.csv --min-freq 10 --min-units 5
+python3 src/build_count_matrix.py data/interim/analysis_units.csv data/interim/vocabulary.csv data/interim/counts
+
+# 6. Estimate the disclosure gap
+python3 src/estimate_distinctiveness.py data/interim/counts.mtx data/interim/counts_units.csv data/interim/counts_vocab.csv docs/distinctiveness_results.csv --folds 5
+python3 src/estimate_content_survival.py data/interim/analysis_units.csv data/interim/vocabulary.csv docs/content_survival_results.csv
 ```
 
 ## Status / next steps
 
-- [x] Acquire Acosta's cleaned minutes/transcripts xlsx as baseline (1976-2018/2019)
-- [x] Download raw Fed minutes HTML for gap years 2019-2026 and calibration years 2015-2018
-- [x] Download raw Fed transcript PDFs for 2020 (2021+ not yet released; ~5-year publication lag)
-- [x] Build and calibrate `src/parse_minutes.py` against Acosta's 2015-2018 section labels
-- [x] Merge Acosta's minutes (1976-2018) with the gap-fill parser output (2019-2026) into
-      `data/interim/minutes_master.csv` (421 meetings, 20,347 rows); `src/build_master_minutes.py`
-      checks for date overlap, coverage gaps, unknown section codes, and duplicate keys before
-      writing the join -- all checks currently pass
-- [ ] Spot-check `data/interim/minutes_gapfill_parsed.csv` (2019-2026, no ground truth available)
-- [x] Build a transcript PDF parser (`src/parse_transcripts.py`: PyMuPDF extraction, speaker-turn
-      segmentation, ECSIT/MPS boundary detection), calibrated against the same 32 meetings. Turn
-      segmentation is solid (0.913 mean turn-count ratio vs. Acosta). Verified Acosta's own
-      section labels against the raw PDFs first (`src/verify_acosta_against_source.py`: 64/64
-      probes matched verbatim -- his data is correct), which surfaced four real parser bugs; after
-      fixing them, section-boundary detection matches Acosta on **32/32 MPS** and **30/32 ECSIT**
-      starts (30/32 meetings match on both), with the 2 remaining ECSIT cases individually
-      understood (one has no recoverable anchor phrase in the source at all; the other traces to
-      a single-row anomaly in Acosta's own data) -- see `docs/transcript_calibration_report.md`
-- [x] Re-verified the 3 minutes-parser/Acosta mismatches noted earlier by cross-checking the
-      pattern across all 32 (not just 1) calibration meetings each -- confirmed genuine anomalies
-      in Acosta's own data (isolated to his last 2 meetings for one case, a single dissent row for
-      the other), not a rule this parser was missing -- see `docs/calibration_report.md`
-- [ ] Extend `build_master_minutes.py`'s join-safety pattern to a `build_master_transcripts.py`
-- [ ] Merge into a single `meeting_id / date / doctype / section / speaker / sequence / text`
-      master table spanning minutes AND transcripts together
-- [ ] Vocabulary selection (frequency + breadth thresholds, procedural-phrase exclusion list)
-- [ ] Meeting x section x doctype phrase count matrices
-- [ ] Leave-out / out-of-sample distinctiveness estimator (Gentzkow-Shapiro-Taddy 2019) comparing
-      transcript vs. minutes phrase usage, by section
+Full pipeline (download -> parse -> calibrate/verify -> join -> vocab
+-> count matrix -> estimate) is built and produces a first result --
+see `docs/findings_summary.md`. Remaining known gaps and natural next
+steps:
+
+- [ ] **2020 transcript section coding is unreliable** (pandemic-era
+      handout-title phrasing drifted from the calibrated pattern, and
+      there's no Acosta ground truth for 2020 to calibrate against) --
+      see `docs/transcript_2020_section_coding_limitation.md`. Closing
+      this needs manual annotation of a few 2020 meetings as a new
+      ground-truth set.
+- [ ] Results are pooled across 1995-2020; not yet time-resolved by
+      chair era or communication-policy milestones (1993 transparency,
+      2011 press conferences, 2020 framework review) -- the original
+      research motivation is specifically about how disclosure changed
+      *over time*.
+- [ ] The simple two-sample comparison in `estimate_content_survival.py`
+      treats meetings as independent; a defensible standard error should
+      cluster/block by year or chair era instead.
+- [ ] Section-group mapping (`build_analysis_units.py`) and vocabulary
+      thresholds (`build_vocabulary.py`) were chosen as reasonable
+      defaults, not sensitivity-tested -- worth checking how much the
+      8.9%/3.3% survival-rate numbers move under alternative choices.
+- [ ] `estimate_distinctiveness.py`'s leave-out classifier saturates at
+      100% accuracy for both section groups (register alone is fully
+      separable) -- it's kept as a documented negative result and a
+      methodological note (see `docs/findings_summary.md`), not as a
+      comparison metric; a topic-content-only vocabulary (e.g. a curated
+      economic/policy lexicon) might avoid the ceiling if that
+      comparison is still wanted.

@@ -12,3 +12,10 @@ data/raw/minutes/
 data/raw/minutes_calib/
 data/raw/transcripts/
 data/raw/transcripts_calib/
+
+# Large fully-regeneratable derived intermediates (see each script's
+# docstring in src/ for the exact reproduction command). Small,
+# human-inspectable derived outputs (vocabulary.csv, *_units.csv,
+# *_vocab.csv, the calibration/results CSVs in docs/) stay tracked.
+data/interim/analysis_units.csv
+data/interim/counts.mtx
