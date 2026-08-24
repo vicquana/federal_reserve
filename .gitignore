@@ -19,3 +19,6 @@ data/raw/transcripts_calib/
 # *_vocab.csv, the calibration/results CSVs in docs/) stay tracked.
 data/interim/analysis_units.csv
 data/interim/counts.mtx
+data/interim/transcripts_master.csv
+data/interim/minutes_master.csv
+data/interim/transcripts_calib_parsed.csv
