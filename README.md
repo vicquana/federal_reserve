@@ -64,11 +64,16 @@ python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.cs
 - [x] Download raw Fed minutes HTML for gap years 2019-2026 and calibration years 2015-2018
 - [x] Download raw Fed transcript PDFs for 2020 (2021+ not yet released; ~5-year publication lag)
 - [x] Build and calibrate `src/parse_minutes.py` against Acosta's 2015-2018 section labels
+- [x] Merge Acosta's minutes (1976-2018) with the gap-fill parser output (2019-2026) into
+      `data/interim/minutes_master.csv` (421 meetings, 20,347 rows); `src/build_master_minutes.py`
+      checks for date overlap, coverage gaps, unknown section codes, and duplicate keys before
+      writing the join -- all checks currently pass
 - [ ] Spot-check `data/interim/minutes_gapfill_parsed.csv` (2019-2026, no ground truth available)
 - [ ] Build a transcript PDF parser (speaker-turn segmentation + ECSIT/MPS/AGGREGATES section
-      coding), calibrated the same way against Acosta's transcript section labels
+      coding), calibrated the same way against Acosta's transcript section labels, then extend
+      `build_master_minutes.py`'s join-safety pattern to a `build_master_transcripts.py`
 - [ ] Merge into a single `meeting_id / date / doctype / section / speaker / sequence / text`
-      master table spanning both the Acosta baseline and the gap-year extension
+      master table spanning minutes AND transcripts together
 - [ ] Vocabulary selection (frequency + breadth thresholds, procedural-phrase exclusion list)
 - [ ] Meeting x section x doctype phrase count matrices
 - [ ] Leave-out / out-of-sample distinctiveness estimator (Gentzkow-Shapiro-Taddy 2019) comparing
