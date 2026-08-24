@@ -1,0 +1,13 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# Third-party / re-downloadable raw data: not committed. See
+# docs/data_provenance.md for exact sources, checksums, and the
+# download scripts (src/download_fed_minutes.py,
+# src/download_fed_transcripts.py) that regenerate these bit-for-bit.
+data/external/*.xlsx
+data/raw/minutes/
+data/raw/minutes_calib/
+data/raw/transcripts/
