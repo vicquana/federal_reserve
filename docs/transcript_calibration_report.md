@@ -8,8 +8,8 @@ through 2018-12-19 (raw PDFs in `data/raw/transcripts_calib/`)
 **Reproduce with:**
 
 ```bash
-python3 src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
-python3 src/validate_transcripts_calibration.py data/interim/transcripts_calib_parsed.csv data/external/acosta_transcripts.xlsx docs/transcript_calibration_results.csv
+uv run --with-requirements requirements.txt python3 src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
+uv run --with-requirements requirements.txt python3 src/validate_transcripts_calibration.py data/interim/transcripts_calib_parsed.csv data/external/acosta_transcripts.xlsx docs/transcript_calibration_results.csv
 ```
 
 Full per-meeting numbers are in `docs/transcript_calibration_results.csv`.
@@ -43,7 +43,7 @@ sections) matched verbatim** (`docs/transcript_source_verification.csv`).
 Reproduce with:
 
 ```bash
-python3 src/verify_acosta_against_source.py data/raw/transcripts_calib data/external/acosta_transcripts.xlsx docs/transcript_source_verification.csv
+uv run --with-requirements requirements.txt python3 src/verify_acosta_against_source.py data/raw/transcripts_calib data/external/acosta_transcripts.xlsx docs/transcript_source_verification.csv
 ```
 
 This confirms Acosta's section boundaries are correct against the

@@ -6,7 +6,7 @@ row-index and column-index (vocab) CSVs, mirroring the congress_text
 dataset's own file layout (docs/REFERENCES.md).
 
 Usage:
-    python3 src/build_count_matrix.py \
+    uv run --with-requirements requirements.txt python3 src/build_count_matrix.py \
         data/interim/analysis_units.csv data/interim/vocabulary.csv \
         data/interim/counts
     # writes data/interim/counts.mtx, data/interim/counts_units.csv,

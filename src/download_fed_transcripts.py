@@ -1,7 +1,7 @@
 """Download FOMC meeting transcript PDFs from federalreserve.gov.
 
 Usage:
-    python3 src/download_fed_transcripts.py --stems FOMC20200129meeting FOMC20200302confcall --out data/raw/transcripts
+    uv run --with-requirements requirements.txt python3 src/download_fed_transcripts.py --stems FOMC20200129meeting FOMC20200302confcall --out data/raw/transcripts
 
 Transcripts are released with an approximately five-year lag, at:
     https://www.federalreserve.gov/monetarypolicy/files/{stem}.pdf

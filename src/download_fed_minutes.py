@@ -1,8 +1,8 @@
 """Download FOMC minutes (HTML) from federalreserve.gov for a list of meeting dates.
 
 Usage:
-    python3 src/download_fed_minutes.py --dates 20190130 20190320 ... --out data/raw/minutes
-    python3 src/download_fed_minutes.py --dates-file dates.txt --out data/raw/minutes_calib
+    uv run --with-requirements requirements.txt python3 src/download_fed_minutes.py --dates 20190130 20190320 ... --out data/raw/minutes
+    uv run --with-requirements requirements.txt python3 src/download_fed_minutes.py --dates-file dates.txt --out data/raw/minutes_calib
 
 Minutes are published on federalreserve.gov roughly three weeks after each
 regularly scheduled meeting, at a stable URL pattern:

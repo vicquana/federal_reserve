@@ -4,7 +4,7 @@ sanity checks that the join is clean: no date overlap/duplication, no
 unexpected section codes, no meeting-cadence gaps.
 
 Usage:
-    python3 src/build_master_minutes.py \
+    uv run --with-requirements requirements.txt python3 src/build_master_minutes.py \
         data/external/acosta_minutes.xlsx \
         data/interim/minutes_gapfill_parsed.csv \
         data/interim/minutes_master.csv

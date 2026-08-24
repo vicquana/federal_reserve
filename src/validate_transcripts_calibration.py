@@ -11,7 +11,7 @@ For each meeting date, compares:
     string equality)
 
 Usage:
-    python3 src/validate_transcripts_calibration.py \
+    uv run --with-requirements requirements.txt python3 src/validate_transcripts_calibration.py \
         data/interim/transcripts_calib_parsed.csv \
         data/external/acosta_transcripts.xlsx \
         docs/transcript_calibration_results.csv

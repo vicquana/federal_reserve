@@ -8,7 +8,7 @@ For each meeting date, compares:
 Writes a per-meeting CSV report and prints a summary.
 
 Usage:
-    python3 src/validate_minutes_calibration.py \
+    uv run --with-requirements requirements.txt python3 src/validate_minutes_calibration.py \
         data/interim/minutes_calib_parsed.csv \
         data/external/acosta_minutes.xlsx \
         docs/calibration_results.csv

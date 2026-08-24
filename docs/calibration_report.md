@@ -7,8 +7,8 @@
 **Reproduce with:**
 
 ```bash
-python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
-python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.csv data/external/acosta_minutes.xlsx docs/calibration_results.csv
+uv run --with-requirements requirements.txt python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
+uv run --with-requirements requirements.txt python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.csv data/external/acosta_minutes.xlsx docs/calibration_results.csv
 ```
 
 Full per-meeting numbers are in `docs/calibration_results.csv`.

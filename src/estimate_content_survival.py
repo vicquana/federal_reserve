@@ -21,7 +21,7 @@ minutes is a real, continuously-varying quantity, and is the more
 literal reading of "disclosure compression" in the first place.
 
 Usage:
-    python3 src/estimate_content_survival.py \
+    uv run --with-requirements requirements.txt python3 src/estimate_content_survival.py \
         data/interim/analysis_units.csv data/interim/vocabulary.csv \
         docs/content_survival_results.csv
 """

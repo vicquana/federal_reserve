@@ -31,8 +31,8 @@ the rule consistently rather than reproducing that apparent labeling
 error. See docs/calibration_report.md for the row-by-row comparison.
 
 Usage:
-    python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
-    python3 src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
+    uv run --with-requirements requirements.txt python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
+    uv run --with-requirements requirements.txt python3 src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
 """
 import argparse
 import glob

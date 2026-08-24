@@ -29,7 +29,7 @@ detectably different language -- the paper's operational definition
 of a "disclosure gap."
 
 Usage:
-    python3 src/estimate_distinctiveness.py data/interim/counts.mtx \
+    uv run --with-requirements requirements.txt python3 src/estimate_distinctiveness.py data/interim/counts.mtx \
         data/interim/counts_units.csv data/interim/counts_vocab.csv \
         docs/distinctiveness_results.csv --folds 5
 """

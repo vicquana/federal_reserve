@@ -26,7 +26,7 @@ prepare 2019+ data in the same target schema.
 - Output: `data/raw/minutes/*.htm`
 - Reproduce:
   ```bash
-  python3 src/download_fed_minutes.py --dates-file data/raw/minutes_gapfill_dates.txt --out data/raw/minutes
+  uv run --with-requirements requirements.txt python3 src/download_fed_minutes.py --dates-file data/raw/minutes_gapfill_dates.txt --out data/raw/minutes
   ```
 
 ### Transcripts, 2020 (9 meetings, including the 2020-03-02 unscheduled conference call)
@@ -36,7 +36,7 @@ prepare 2019+ data in the same target schema.
 - Output: `data/raw/transcripts/*.pdf`
 - Reproduce:
   ```bash
-  python3 src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2020_stems.txt) --out data/raw/transcripts
+  uv run --with-requirements requirements.txt python3 src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2020_stems.txt) --out data/raw/transcripts
   ```
 - Note: transcripts are released on a ~5-year lag. 2021 was probed
   (`FOMC20210127meeting.pdf`) and returns HTTP 404 as of 2026-08-24 —
@@ -82,6 +82,6 @@ public Federal Reserve materials). Per-file SHA-256 checksums are in
 
 Regenerate both with:
 ```bash
-python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
-python3 src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
+uv run --with-requirements requirements.txt python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
+uv run --with-requirements requirements.txt python3 src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
 ```

@@ -10,7 +10,7 @@ selection cares about exact phrases like "not concerned" or "could
 persist" that stemming/aggressive filtering would blur.
 
 Usage:
-    python3 src/build_vocabulary.py data/interim/analysis_units.csv data/interim/vocabulary.csv \
+    uv run --with-requirements requirements.txt python3 src/build_vocabulary.py data/interim/analysis_units.csv data/interim/vocabulary.csv \
         --min-freq 10 --min-units 5
 """
 import argparse

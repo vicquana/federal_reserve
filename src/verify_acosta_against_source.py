@@ -11,7 +11,7 @@ mismatch against src/parse_transcripts.py's output is necessarily this
 project's parsing bug, not an error in Acosta's database.
 
 Usage:
-    python3 src/verify_acosta_against_source.py \
+    uv run --with-requirements requirements.txt python3 src/verify_acosta_against_source.py \
         data/raw/transcripts_calib data/external/acosta_transcripts.xlsx \
         docs/transcript_source_verification.csv
 """

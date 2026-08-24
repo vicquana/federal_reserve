@@ -17,7 +17,7 @@ everything from years without section coding at all) are dropped --
 they're not part of either side of the ECON-vs-POLICY comparison.
 
 Usage:
-    python3 src/build_analysis_units.py \
+    uv run --with-requirements requirements.txt python3 src/build_analysis_units.py \
         data/interim/minutes_master.csv data/interim/transcripts_master.csv \
         data/interim/analysis_units.csv
 """

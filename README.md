@@ -64,38 +64,48 @@ docs/           Provenance, calibration methodology/results, findings, reference
 
 ## Reproducing
 
+Uses [uv](https://docs.astral.sh/uv/) to run every script in an
+ephemeral environment built from the pinned `requirements.txt`, so
+nothing needs to be installed into the ambient Python first:
+
 ```bash
-pip install -r requirements.txt   # or: uv run --with <pkg>==<ver> python3 ...
+alias run='uv run --with-requirements requirements.txt python3'
 
 # 1. Download raw materials (already done; re-run only to refresh/verify)
-python3 src/download_fed_minutes.py --dates-file data/raw/minutes_gapfill_dates.txt --out data/raw/minutes
-python3 src/download_fed_minutes.py --dates-file data/raw/minutes_calib_dates.txt --out data/raw/minutes_calib
-python3 src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2020_stems.txt) --out data/raw/transcripts
+run src/download_fed_minutes.py --dates-file data/raw/minutes_gapfill_dates.txt --out data/raw/minutes
+run src/download_fed_minutes.py --dates-file data/raw/minutes_calib_dates.txt --out data/raw/minutes_calib
+run src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2020_stems.txt) --out data/raw/transcripts
 
 # 2. Parse raw HTML/PDF into Acosta's target schema
-python3 src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
-python3 src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
-python3 src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
-python3 src/parse_transcripts.py data/raw/transcripts data/interim/transcripts_gapfill_parsed.csv
+run src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
+run src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
+run src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
+run src/parse_transcripts.py data/raw/transcripts data/interim/transcripts_gapfill_parsed.csv
 
 # 3. Validate parsers against Acosta's ground truth, and Acosta against the primary source
-python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.csv data/external/acosta_minutes.xlsx docs/calibration_results.csv
-python3 src/validate_transcripts_calibration.py data/interim/transcripts_calib_parsed.csv data/external/acosta_transcripts.xlsx docs/transcript_calibration_results.csv
-python3 src/verify_acosta_against_source.py data/raw/transcripts_calib data/external/acosta_transcripts.xlsx docs/transcript_source_verification.csv
+run src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.csv data/external/acosta_minutes.xlsx docs/calibration_results.csv
+run src/validate_transcripts_calibration.py data/interim/transcripts_calib_parsed.csv data/external/acosta_transcripts.xlsx docs/transcript_calibration_results.csv
+run src/verify_acosta_against_source.py data/raw/transcripts_calib data/external/acosta_transcripts.xlsx docs/transcript_source_verification.csv
 
 # 4. Join Acosta + gap-fill into continuous master tables
-python3 src/build_master_minutes.py data/external/acosta_minutes.xlsx data/interim/minutes_gapfill_parsed.csv data/interim/minutes_master.csv
-python3 src/build_master_transcripts.py data/external/acosta_transcripts.xlsx data/interim/transcripts_gapfill_parsed.csv data/interim/transcripts_master.csv
+run src/build_master_minutes.py data/external/acosta_minutes.xlsx data/interim/minutes_gapfill_parsed.csv data/interim/minutes_master.csv
+run src/build_master_transcripts.py data/external/acosta_transcripts.xlsx data/interim/transcripts_gapfill_parsed.csv data/interim/transcripts_master.csv
 
 # 5. Build the analysis dataset: units -> vocabulary -> count matrix
-python3 src/build_analysis_units.py data/interim/minutes_master.csv data/interim/transcripts_master.csv data/interim/analysis_units.csv
-python3 src/build_vocabulary.py data/interim/analysis_units.csv data/interim/vocabulary.csv --min-freq 10 --min-units 5
-python3 src/build_count_matrix.py data/interim/analysis_units.csv data/interim/vocabulary.csv data/interim/counts
+run src/build_analysis_units.py data/interim/minutes_master.csv data/interim/transcripts_master.csv data/interim/analysis_units.csv
+run src/build_vocabulary.py data/interim/analysis_units.csv data/interim/vocabulary.csv --min-freq 10 --min-units 5
+run src/build_count_matrix.py data/interim/analysis_units.csv data/interim/vocabulary.csv data/interim/counts
 
 # 6. Estimate the disclosure gap
-python3 src/estimate_distinctiveness.py data/interim/counts.mtx data/interim/counts_units.csv data/interim/counts_vocab.csv docs/distinctiveness_results.csv --folds 5
-python3 src/estimate_content_survival.py data/interim/analysis_units.csv data/interim/vocabulary.csv docs/content_survival_results.csv
+run src/estimate_distinctiveness.py data/interim/counts.mtx data/interim/counts_units.csv data/interim/counts_vocab.csv docs/distinctiveness_results.csv --folds 5
+run src/estimate_content_survival.py data/interim/analysis_units.csv data/interim/vocabulary.csv docs/content_survival_results.csv
 ```
+
+(Each `run src/foo.py ...` line above is exactly equivalent to `uv run
+--with-requirements requirements.txt python3 src/foo.py ...`; the
+`alias` just keeps the block readable. Without `uv`, `pip install -r
+requirements.txt` into a virtualenv and calling `python3 src/foo.py
+...` directly works identically.)
 
 ## Status / next steps
 

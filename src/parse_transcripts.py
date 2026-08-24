@@ -18,8 +18,8 @@ Pipeline
    left unlabeled (NaN) -- see docs/transcript_calibration_report.md.
 
 Usage:
-    python3 src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
-    python3 src/parse_transcripts.py data/raw/transcripts data/interim/transcripts_gapfill_parsed.csv
+    uv run --with-requirements requirements.txt python3 src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
+    uv run --with-requirements requirements.txt python3 src/parse_transcripts.py data/raw/transcripts data/interim/transcripts_gapfill_parsed.csv
 """
 import argparse
 import glob
