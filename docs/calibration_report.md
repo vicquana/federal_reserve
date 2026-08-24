@@ -88,6 +88,35 @@ these 3 known inconsistencies are set aside) as the calibration bar
 met, per the project decision to get "close to Acosta's cleanliness"
 rather than bit-for-bit reproduce his file.
 
+**Re-checked 2026-08-24** (matching the verification standard applied
+to the transcript parser, `docs/transcript_calibration_report.md`):
+before accepting these three as Acosta-side anomalies rather than a
+rule this parser was missing, each was cross-checked against the
+pattern in the other 29-30 calibration meetings, not just spot-checked
+against one comparison date:
+- The FOMC_POLICY -> OTHER_MINUTES transition at the policy-directive
+  boundary was checked across all 32 meetings, not just 2018-08-01.
+  **30 of 32 follow OTHER_MINUTES; only 2018-11-08 and 2018-12-19 --
+  literally the last two meetings in Acosta's entire minutes
+  database -- follow FOMC_ECON instead.** That both anomalies fall
+  exactly at the end of his data's date range, rather than being
+  randomly distributed through the sample, points to a pipeline
+  version change specific to whatever last-minute data refresh
+  produced his final two meetings, not a content-based rule tied to
+  anything in the document itself.
+- The dissent-labeling pattern was checked against every "Voting
+  against this action" row in the calibration sample (2015-09-17,
+  2016-09-21, 2016-11-02, 2017-12-13). **3 of 4 are OTHER_MINUTES;
+  only 2015-09-17's is FOMC_POLICY**, with no distinguishing feature
+  in the dissent itself (all four are single-sentence dissenter-name
+  lists in the same document position).
+
+No hidden rule was found in either case -- the parser's consistent
+behavior remains the correct choice for extending to years Acosta
+never labeled, since there is no way to know which of "the general
+rule" or "the last-two-meetings anomaly" he would have applied going
+forward.
+
 ## Known limitations / follow-ups
 
 - Signature-block filtering (`SIGNATURE_RE`) only fires when the

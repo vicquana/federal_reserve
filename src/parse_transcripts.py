@@ -34,26 +34,44 @@ FOOTER_RE = re.compile(
 )
 
 SPEAKER_RE = re.compile(
-    # a footnote marker digit is sometimes glued directly onto the
-    # trailing period with no space, e.g. "MR. WILCOX.3  Thank you..."
-    r"^([A-Z][A-Z.’' -]{1,40}?)\.\d{0,2}  +(?=\S)",
+    # A footnote marker digit is sometimes glued directly onto the
+    # trailing period with no space, e.g. "MR. WILCOX.3 Thank you..."
+    # -- and when it is, the gap to the next word can be just one
+    # space rather than two. The two cases need separate space
+    # requirements: with no digit, 2+ spaces is required so the
+    # non-greedy label match is forced past a bare title abbreviation
+    # ("MR.", "MS.") to the full "MR. WILCOX." before the period that
+    # ends the label; with a digit present as an unambiguous
+    # end-of-label marker, 1+ space is safe.
+    r"^([A-Z][A-Z.’' -]{1,40}?)\.(?:\d{1,2}\s+|  +)(?=\S)",
     re.MULTILINE,
 )
 
 BRIEFING_ANCHOR_RE = re.compile(
-    # Every staff briefing handout title observed across the 2015-2018
-    # calibration sample literally starts with the words "Material
-    # for ..." inside quotation marks (e.g. "Material for Briefing on
-    # the U.S. Outlook", "Material for the Staff Presentation on the
-    # Economic and Financial Situation", "Material for Briefing on
-    # Monetary Policy Alternatives"). The connector phrase in front of
-    # it varies a lot ("I'll be referring to the materials titled...",
-    # "I will be referring to the handout labeled...", "Our exhibits
-    # are in the packet titled...", or no connector phrase at all,
-    # just "... in front of you: 'Material for ...'"), so anchoring on
-    # the quoted title itself is far more robust than trying to match
-    # every connector-phrase variant.
-    r"[“\"]\s*Material for.{0,140}",
+    # Two distinct handout-title conventions show up across the
+    # 2015-2018 calibration sample. Later years (~2016 on) mostly use
+    # titles that literally start with the words "Material for ..."
+    # (e.g. "Material for Briefing on the U.S. Outlook", "Material for
+    # the Staff Presentation on the Economic and Financial Situation")
+    # regardless of the connector phrase in front of them ("referring
+    # to the materials titled...", "labeled...", "with the cover page
+    # that is titled...", or no connector at all) -- so that title
+    # prefix is matched directly. Earlier years (~2015-2016) instead
+    # use short titles like "The U.S. Outlook." / "The International
+    # Outlook." that don't share that prefix, so as a second pattern
+    # any quoted text following "referring to ... titled/labeled/with
+    # the cover page" is also captured, whatever the quote says.
+    # The capture stops at the next quotation mark rather than a fixed
+    # character count, so only the title itself is classified below --
+    # not whatever prose follows it (which can accidentally contain an
+    # exclude keyword, e.g. "...Monetary Policy Alternatives." As
+    # Simon noted yesterday, your COMMUNICATIONS following the March
+    # FOMC meeting..." would otherwise wrongly exclude a real MPS
+    # briefing just because "communications" shows up two sentences
+    # later).
+    r"(?:[“\"]\s*Material for[^”\"]{0,140})"
+    r"|(?:referring to.{0,60}?(?:titled|labeled|labelled|"
+    r"with the cover page)\s*[“\"][^”\"]{0,140})",
     re.IGNORECASE,
 )
 
@@ -122,29 +140,34 @@ def parse_one(path: str) -> list[dict]:
             continue
         turns.append({"speaker": clean_speaker(m.group(1)), "text": body})
 
-    # locate the two briefing anchors (ECSIT start, MPS start) by
-    # scanning turn text in order and keyword-classifying each match.
-    # ECSIT and MPS are found independently (not "MPS must come after
-    # a found ECSIT") because either anchor phrase can fail to match
-    # in a given year/meeting on its own -- requiring ECSIT first
-    # would otherwise also lose an MPS match that did succeed.
-    ecsit_start = None
-    mps_start = None
+    # Locate the two briefing anchors (ECSIT start, MPS start).
+    # Collect every classified match first, in turn order, rather
+    # than greedily keeping the first match per label -- a one-off
+    # special-topic memo can slip past the exclude-keyword list and
+    # falsely classify as MPS (e.g. a briefing titled "The Linkages
+    # among Monetary Policy, Macroprudential ...") before the real
+    # MPS briefing does. Taking the *first MPS match after the ECSIT
+    # match* (falling back to the first MPS match at all if ECSIT was
+    # never found) recovers the real boundary instead of getting
+    # permanently stuck on that earlier false positive.
+    ecsit_idxs = []
+    mps_idxs = []
     for i, t in enumerate(turns):
         m = BRIEFING_ANCHOR_RE.search(t["text"])
         if not m:
             continue
         label = classify_anchor(m.group())
-        if label == "ECSIT" and ecsit_start is None:
-            ecsit_start = i
-        elif label == "MPS" and mps_start is None:
-            mps_start = i
-    # MPS always follows ECSIT in the real meeting structure; if the
-    # MPS anchor happened to fire before the ECSIT one (e.g. because a
-    # special-topic turn slipped past the exclude-keyword list), treat
-    # it as spurious rather than let it truncate ECSIT.
-    if ecsit_start is not None and mps_start is not None and mps_start < ecsit_start:
-        mps_start = None
+        if label == "ECSIT":
+            ecsit_idxs.append(i)
+        elif label == "MPS":
+            mps_idxs.append(i)
+
+    ecsit_start = ecsit_idxs[0] if ecsit_idxs else None
+    if ecsit_start is not None:
+        after = [i for i in mps_idxs if i > ecsit_start]
+        mps_start = after[0] if after else None
+    else:
+        mps_start = mps_idxs[0] if mps_idxs else None
 
     rows = []
     speaker_counts: dict[str, int] = {}

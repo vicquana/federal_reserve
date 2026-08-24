@@ -71,14 +71,17 @@ python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.cs
 - [ ] Spot-check `data/interim/minutes_gapfill_parsed.csv` (2019-2026, no ground truth available)
 - [x] Build a transcript PDF parser (`src/parse_transcripts.py`: PyMuPDF extraction, speaker-turn
       segmentation, ECSIT/MPS boundary detection), calibrated against the same 32 meetings. Turn
-      segmentation is solid (0.911 mean turn-count ratio vs. Acosta). Verified Acosta's own
+      segmentation is solid (0.913 mean turn-count ratio vs. Acosta). Verified Acosta's own
       section labels against the raw PDFs first (`src/verify_acosta_against_source.py`: 64/64
-      probes matched verbatim -- his data is correct), which surfaced two real parser bugs; after
-      fixing them, section-boundary detection is strong on MPS (30/32 exact match) and improved
-      but imperfect on ECSIT (22/32) -- see `docs/transcript_calibration_report.md` for remaining
-      failure modes before using it for section-conditional analysis
-- [ ] Decide whether to refine ECSIT boundary detection further before extending to 2020, or
-      proceed with turn-level data (+ provisional section labels) for now
+      probes matched verbatim -- his data is correct), which surfaced four real parser bugs; after
+      fixing them, section-boundary detection matches Acosta on **32/32 MPS** and **30/32 ECSIT**
+      starts (30/32 meetings match on both), with the 2 remaining ECSIT cases individually
+      understood (one has no recoverable anchor phrase in the source at all; the other traces to
+      a single-row anomaly in Acosta's own data) -- see `docs/transcript_calibration_report.md`
+- [x] Re-verified the 3 minutes-parser/Acosta mismatches noted earlier by cross-checking the
+      pattern across all 32 (not just 1) calibration meetings each -- confirmed genuine anomalies
+      in Acosta's own data (isolated to his last 2 meetings for one case, a single dissent row for
+      the other), not a rule this parser was missing -- see `docs/calibration_report.md`
 - [ ] Extend `build_master_minutes.py`'s join-safety pattern to a `build_master_transcripts.py`
 - [ ] Merge into a single `meeting_id / date / doctype / section / speaker / sequence / text`
       master table spanning minutes AND transcripts together

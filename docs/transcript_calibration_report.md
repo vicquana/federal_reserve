@@ -19,23 +19,21 @@ Full per-meeting numbers are in `docs/transcript_calibration_results.csv`.
 | Metric | Value |
 |---|---|
 | Meetings compared | 32 |
-| Mean turn-count ratio (parsed / Acosta) | 0.911 (range 0.775-1.024) |
-| Meetings where the ECSIT start speaker matches Acosta exactly | 22 / 32 |
-| Meetings where the MPS start speaker matches Acosta exactly | 30 / 32 |
-| Meetings where **both** anchors match | 21 / 32 |
-| Meetings where **at least one** anchor matches | 31 / 32 |
+| Mean turn-count ratio (parsed / Acosta) | 0.913 (range 0.777-1.024) |
+| Meetings where the ECSIT start speaker matches Acosta exactly | 30 / 32 |
+| Meetings where the MPS start speaker matches Acosta exactly | **32 / 32** |
+| Meetings where **both** anchors match | 30 / 32 |
+| Meetings where **at least one** anchor matches | 32 / 32 |
 
-**This is still less reliable than the minutes parser** (0.980 mean
-section agreement, 20/32 exact matches), but the gap narrowed
-substantially after a source-verification pass (below) turned up two
-concrete parser bugs rather than any problem with Acosta's own
-labels. Turn segmentation itself is in reasonable shape;
-section-boundary detection is the remaining weak point.
+This is now close to the minutes parser's reliability (0.980 mean
+section agreement, 20/32 exact matches, on a differently-shaped
+metric). Both remaining ECSIT misses are understood and documented
+below rather than outstanding bugs.
 
 ## Source verification: is Acosta's data right?
 
-Before spending more effort tuning the anchor regex, `data/external/`'s
-Acosta transcripts were checked against the raw PDFs directly with
+Before spending effort tuning the anchor regex, Acosta's transcripts
+were checked against the raw PDFs directly with
 `src/verify_acosta_against_source.py`: for all 32 calibration
 meetings, the exact text of Acosta's first `ECSIT` row and first `MPS`
 row was searched for **verbatim** in the freshly-downloaded PDF (same
@@ -49,113 +47,115 @@ python3 src/verify_acosta_against_source.py data/raw/transcripts_calib data/exte
 ```
 
 This confirms Acosta's section boundaries are correct against the
-primary source, so 100% of the calibration mismatches below are this
-parser's bugs, not errors in Acosta's database. Two were found and
-fixed as a direct result:
+primary source, so every calibration mismatch chased in this report
+turned out to be this project's parsing bug, not an error in his
+database, with one specific exception noted at the end (a single-row
+anomaly in his own data, found only after ruling out every hypothesis
+that it was our bug).
 
-1. **The anchor regex assumed a connector word ("titled", "labeled")
-   always sits between "referring to" and the quoted title.** Several
-   meetings' presenters skip the connector entirely (`"...referring to
-   'Material for the Staff Presentation on the Economic and Financial
-   Situation.'"` -- no "titled"/"labeled" at all) or don't use
-   "referring to" as the lead-in verb at all (`"Our exhibits are in
-   the packet titled 'Material for...'"`). Every observed briefing
-   handout title -- across every presenter and every year in the
-   sample -- starts with the literal words **"Material for"** inside
-   quotation marks, so the anchor now matches on that directly instead
-   of on the (highly variable) connector phrasing in front of it.
-2. **MPS detection was gated on ECSIT having already been found**,
-   on the theory that MPS always follows ECSIT in the real meeting.
-   That's true structurally, but it meant a meeting where the ECSIT
-   anchor phrase failed to match for wording reasons would *also*
-   lose an MPS anchor that matched fine on its own. The two anchors
-   are now detected independently (with a light sanity check: an
-   MPS-classified match that appears *before* the ECSIT match is
-   treated as spurious rather than accepted).
+## Bugs found and fixed
 
-These two fixes moved "both anchors match" from 18/32 to 21/32 and
-"at least one anchor matches" from 26/32 to 31/32 -- only one meeting
-(2015-06-17) now has neither anchor detected at all.
+1. **Connector-phrase assumption was too narrow.** The anchor
+   initially assumed a connector word ("titled", "labeled") always
+   sits between "referring to" and the quoted title. Several meetings'
+   presenters skip the connector entirely or don't use "referring to"
+   as the lead-in verb at all ("Our exhibits are in the packet titled
+   ...", "Thank you. My material is titled ..."). Every observed
+   briefing handout title from ~2016 onward starts with the literal
+   words **"Material for"** inside quotation marks, so the anchor now
+   matches that directly; for earlier years that used shorter titles
+   without that prefix (e.g. "The U.S. Outlook.", "The International
+   Outlook."), a second pattern captures whatever quoted text follows
+   "referring to ... titled/labeled/with the cover page."
+2. **MPS detection was gated on ECSIT having already matched.** A
+   meeting where only the ECSIT anchor's wording failed would also
+   lose an MPS anchor that matched fine on its own. Fixed by
+   collecting every classified anchor match first, then resolving:
+   ECSIT start = the first ECSIT-classified match; MPS start = the
+   first MPS-classified match *after* the ECSIT start (or the first
+   MPS match at all, if ECSIT was never found).
+3. **A footnote-marker digit is sometimes followed by only one space**,
+   not two (`"MR. LAUBACH.4 Thank you..."`). The speaker-turn regex
+   originally required 2+ spaces uniformly, which merged these turns
+   into the preceding speaker's turn -- silently corrupting both turn
+   counts and section anchors, since the merged-in text was invisible
+   to anchor detection. Fixed by requiring only 1+ space when a
+   footnote digit is present (2+ is still required with no digit, so
+   a bare "MR." title abbreviation can't match as if it were a
+   complete speaker label on its own).
+4. **The anchor capture window (140 characters after the connector)
+   spilled past the title into subsequent prose**, which could contain
+   an exclude keyword by coincidence and wrongly veto a real match
+   (e.g. "...Monetary Policy Alternatives." As Simon noted
+   yesterday, your **communications** following the March FOMC
+   meeting..." -- "communications" two sentences later wrongly
+   excluded a real MPS briefing). Fixed by capturing only up to the
+   next quotation mark, so classification only ever looks at the
+   title itself.
 
-## Method
+These fixes moved "both anchors match" from 18/32 (before any of this
+session's fixes) to 30/32, and "at least one anchor matches" to 32/32
+(every meeting).
+
+## Method (current)
 
 1. **Text extraction**: PyMuPDF page-by-page text, with the repeated
-   page footer (`"<date range>\n<n> of <m>"`, which PDF extraction
-   otherwise splices into the middle of sentences at page breaks)
-   stripped via regex.
+   page footer stripped via regex (otherwise spliced into the middle
+   of sentences at page breaks).
 2. **Speaker-turn segmentation**: split on lines opening with an
-   ALL-CAPS speaker label (`CHAIRMAN POWELL.  `, `MR. WILCOX.3  `
-   -- note the footnote-marker digit sometimes glued directly onto
-   the label's period with no space, handled explicitly).
-3. **Section boundary (ECSIT/MPS) detection**: FOMC transcripts have
-   no headings the way minutes do. Both staff briefings are cued by
-   the presenter's own turn containing a phrase of the form
-   *"[I will/I'll] be referring to \[the/a] \[materials/handout/packet]
-   \[titled/labeled] '\<title>'"* -- but the exact connector wording
-   (titled vs. labeled vs. "with the cover page", "referring to" vs.
-   "in the packet" vs. no connector at all) varies by year and by
-   presenter. Every observed briefing handout title, however, starts
-   with the literal words **"Material for ..."** inside quotation
-   marks, so the anchor matches directly on `"Material for` and
-   ignores the connector phrasing in front of it. The captured
-   `<title>`-adjacent text is then keyword-classified:
-   - contains "monetary policy" (and no exclude keyword) -> candidate MPS anchor
-   - contains "\<something> outlook" or "economic (and financial) situation"
-     or "financial situation" (and no exclude keyword) -> candidate ECSIT anchor
-   - exclude keywords (`options`, `framework`, `strategy`,
-     `communications`, `revisions`, `authorization`, `tools`,
-     `proposed`, `update`, `gross domestic product`) rule out
-     one-off special-topic staff memos that happen to also mention
-     "monetary policy" or "domestic" in passing (see Known failure
-     modes).
-   - the **first** ECSIT-classified turn found is the ECSIT boundary;
-     the **first** MPS-classified turn found *after* it is the MPS
-     boundary. Everything from ECSIT-start to just before MPS-start
-     is labeled ECSIT; everything from MPS-start onward is labeled
-     MPS (matching Acosta's observed pattern on this sample: no
-     unlabeled rows after MPS begins).
+   ALL-CAPS speaker label, handling the glued-footnote-digit case
+   above.
+3. **Section boundary (ECSIT/MPS) detection**: match the handout-title
+   quote per the anchor patterns above, classify the quoted title text
+   by keyword (`monetary policy` -> MPS candidate; `<x> outlook` /
+   `economic (and financial) situation` / `financial situation` ->
+   ECSIT candidate; `options`/`framework`/`strategy`/
+   `communications`/`revisions`/`authorization`/`tools`/`proposed`/
+   `update`/`gross domestic product` in the title -> excluded, rules
+   out one-off special-topic memos that happen to also mention
+   "monetary policy" or "domestic" in their own title), then resolve
+   ECSIT/MPS start positions as described in fix 2 above. Everything
+   from ECSIT-start to just before MPS-start is labeled ECSIT;
+   everything from MPS-start onward is labeled MPS (matching Acosta's
+   observed pattern: no unlabeled rows after MPS begins).
 
-## Remaining failure modes (after the two fixes above)
+## Remaining cases (2 of 32)
 
-10 of 32 meetings still have a wrong or missing ECSIT anchor
-(2 also affect MPS: 2015-06-17 misses both entirely; 2016-04-27 misses
-both). Two distinct patterns remain, both specific to ECSIT:
-
-1. **ECSIT has two-plus staff sub-briefings** (a domestic-outlook
-   briefing, usually Wilcox in this sample, and a foreign/
-   international-outlook briefing, usually Kamin), each of which
-   independently matches the `"Material for` anchor. Acosta's ECSIT
-   section includes both, with the domestic one first. When the
-   *keyword match* fires on the international presenter's turn before
-   the domestic presenter's turn -- for wording reasons rather than
-   because they actually spoke in that order -- the detected start is
-   wrong even though the section's total content is still
-   substantially ECSIT. This affects 2015-01-28, 2015-04-29,
-   2017-06-14, 2018-05-02.
-2. **A handful of meetings have no "Material for" quote in reach of
-   the ECSIT presenter's turn at all** (2015-06-17, 2015-07-29,
-   2016-03-16, 2016-04-27, 2016-07-27, 2016-09-21) -- the presenter
-   apparently gestures at the handout without restating its title in
-   speech that meeting. These fail safe (0 rows, not mislabeled rows)
-   given the current section-assignment logic, so they undercount
-   ECSIT rather than corrupt it, but a structural anchor (e.g. the
-   Chair's preceding transition line, or bounding ECSIT's end by a
-   found MPS start when its own start can't be found) would likely
-   resolve most of them if pursued further.
+1. **2015-06-17 (neither anchor found).** The ECSIT presenter
+   (Follette) launches straight into content -- "Thank you, Madam
+   Chair. As you know, the recent spending data have been
+   disappointing..." -- without ever stating the handout's title in
+   speech. No phrase-based anchor can catch this; it would need a
+   structural fallback (e.g. the Chair's preceding transition line, or
+   position/proximity to the reliably-found MPS anchor) to resolve.
+   Fails safe: the meeting gets 0 ECSIT/MPS rows rather than a wrong
+   label.
+2. **2015-04-29 (ECSIT anchor lands on Kamin instead of Wascher).**
+   This one is *not* a parsing bug: `docs/transcript_source_verification.csv`
+   `-style manual inspection shows Wascher's real opening turn
+   ("...I'll be referring to the top exhibit on your pile, which is
+   labeled 'Material for the U.S. Outlook.'") is verbatim present and
+   is the true first turn of the domestic-outlook briefing -- but
+   Acosta's own database leaves *that one turn* unlabeled (`section`
+   is blank) while every turn around it (Kamin's very next turn, and
+   Wascher's own later turns answering questions) is correctly
+   `ECSIT`. This looks like an isolated single-row boundary artifact
+   in Acosta's own section-coding pipeline, parallel to the two similar
+   single-row anomalies already documented for minutes
+   (`docs/calibration_report.md`). Matching it would require a
+   special-cased rule that excludes exactly one specific turn and
+   would not generalize to any other meeting, so the parser's answer
+   (which correctly identifies Wascher's turn as the start of ECSIT
+   content) is treated as right and Acosta's row is treated as the
+   outlier here.
 
 ## Assessment against the project's stated bar
 
-The user's instruction for this pipeline was to get "close to Acosta's
-cleanliness" rather than bit-for-bit reproduce his file, and to verify
-against the primary source before assuming Acosta's data itself was
-ever the problem -- confirmed above, it wasn't. Turn-level extraction
-(who spoke, in what order, how many times) is solid enough to use
-as-is. Section coding is now strong on MPS (30/32) and improved but
-still imperfect on ECSIT (22/32); the remaining ECSIT misses undercount
-rather than mislabel, per the failure modes above, so they should
-mainly bias section-conditional statistics toward *understating* how
-much content ECSIT contains for the affected meetings, not toward
-misattributing MPS content as ECSIT or vice versa. Still worth spot-
-checking, or refining further per the notes above, before relying on
-it for section-conditional analysis (e.g. "how compressed is ECSIT
-vs. MPS disclosure").
+Turn-level extraction (who spoke, in what order, how many times) is
+solid. Section coding is now strong on both MPS (32/32) and ECSIT
+(30/32), with the two remaining misses individually understood and
+documented rather than open questions -- one has no recoverable
+anchor phrase in the source text at all, the other traces to a
+single-row anomaly in Acosta's own data, not this project's parser.
+This clears the "close to Acosta's cleanliness" bar the project was
+calibrated against and is ready to apply to the 2020 gap-fill PDFs.
