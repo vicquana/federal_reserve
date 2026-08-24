@@ -8,10 +8,10 @@ in 1995 and `docs/transcript_2020_section_coding_limitation.md` for
 why transcript coverage stops in 2020).
 **Reproduce:** `src/build_analysis_units.py` -> `src/build_vocabulary.py`
 -> `src/build_count_matrix.py` -> `src/estimate_distinctiveness.py` /
-`src/estimate_content_survival.py` (see each script's docstring for
-exact invocation).
+`src/estimate_content_survival.py` / `src/estimate_semantic_similarity.py`
+(see each script's docstring for exact invocation).
 
-## Two measurements, two different questions
+## Three measurements, two different questions
 
 ### 1. Doctype-classification accuracy (`docs/distinctiveness_results.csv`) -- saturated, uninformative for this comparison
 
@@ -55,6 +55,47 @@ two-sample comparison doesn't yet account for meeting-level
 autocorrelation over time -- treat the t-stat as a rough significance
 signal, not a publication-ready standard error).
 
+### 3. Semantic (paraphrase-tolerant) recall (`docs/semantic_similarity_results.csv`) -- rules out the "just different word choices" confound
+
+Content-survival rate only counts *exact* bigram matches, so a real
+possibility is that it understates how much survives: if minutes
+paraphrase spoken content into formal prose ("we're worried about
+inflation" -> "participants expressed concern about inflation
+pressures"), that would count as zero overlap despite carrying the
+same information. `src/estimate_semantic_similarity.py` checks this
+directly using sentence embeddings (`all-MiniLM-L6-v2`, via
+`sentence-transformers`) -- the same kind of SBERT-based comparison
+already published for FOMC statements vs. minutes (see
+`docs/REFERENCES.md`) -- instead of exact word matching: split each
+meeting's transcript and minutes excerpt into sentences, embed them,
+and for every transcript sentence find its single most similar
+minutes sentence (cosine similarity). Averaging that best-match score
+across a meeting's transcript sentences gives a paraphrase-tolerant
+"semantic recall" -- the embedding analog of content-survival rate.
+
+| Section | Mean semantic recall | Mean semantic precision |
+|---|---|---|
+| ECON | **46.4%** | 60.2% |
+| POLICY | **36.1%** | 61.2% |
+
+**Same direction, same order of magnitude of significance** (+10.4
+points ECON over POLICY, approx. t-stat 40, 201/190 paired meetings)
+as the exact-match content-survival result -- paraphrase tolerance
+narrows the absolute gap (as expected, since it credits reworded
+content the bigram method misses) but does not erase it. This is
+evidence the ECON/POLICY disclosure gap is a real information-content
+difference, not an artifact of minutes using different words for the
+same substance.
+
+Semantic *precision* (of what's written in the minutes, how well does
+it match something actually said) is essentially identical between
+ECON and POLICY (~60-61%) -- minutes appear equally "grounded" in what
+was said for both sections. The gap is specifically in *recall*: how
+much of what's said gets included at all, not how faithful what is
+included happens to be. That refines the finding: this looks like
+selective compression (choosing to include less), not distortion
+(including different or less-accurate content).
+
 ## Convergent evidence: raw word-count compression points the same direction
 
 Independent of vocabulary overlap, ECON and POLICY excerpts differ
@@ -68,8 +109,9 @@ the same meeting:
 
 Policy deliberation is compressed by word count nearly 4x more
 aggressively than economic-outlook discussion -- consistent with, and
-independent confirmation of, the content-survival-rate finding above.
-Two unrelated measurements (vocabulary overlap; raw length reduction)
+independent confirmation of, the content-survival-rate and semantic-
+recall findings above. Three unrelated measurements (exact vocabulary
+overlap; paraphrase-tolerant semantic overlap; raw length reduction)
 agree: **the substance of the Committee's monetary-policy debate is
 disclosed far more sparingly than the substance of its economic
 assessment.**
@@ -97,3 +139,11 @@ assessment.**
   criterion; worth a sensitivity check before treating exact
   percentages (8.9%, 3.3%) as precise rather than directionally
   robust.
+- `estimate_semantic_similarity.py` uses `all-MiniLM-L6-v2`, a small
+  general-purpose sentence embedding model, not one fine-tuned on
+  economic/financial or FOMC-specific text; a domain-adapted model
+  (e.g. FinBERT-family embeddings) might shift the absolute
+  percentages, though there's no obvious reason it would flip the
+  ECON > POLICY direction. Sentence splitting is a simple regex
+  heuristic, not a proper sentence tokenizer, and short fragments
+  (<4 words) are dropped -- worth checking sensitivity to both.

@@ -10,11 +10,13 @@ deliberation).
 **Headline result so far** (`docs/findings_summary.md`): pooling
 1995-2020, the substantive vocabulary spoken during monetary-policy
 deliberation survives into the official minutes at less than half the
-rate of economic-outlook discussion (3.3% vs. 8.9% bigram survival),
+rate of economic-outlook discussion (3.3% vs. 8.9% exact bigram
+survival; 36.1% vs. 46.4% paraphrase-tolerant semantic recall),
 corroborated independently by raw word-count compression (24.9x vs.
-6.5x). **Monetary-policy deliberation is disclosed far more sparingly
-than economic-outlook discussion.** See that doc for caveats before
-treating this as publication-ready.
+6.5x). Three unrelated measurements agree: **monetary-policy
+deliberation is disclosed far more sparingly than economic-outlook
+discussion.** See that doc for caveats before treating this as
+publication-ready.
 
 ## Data pipeline
 
@@ -32,16 +34,14 @@ raw Fed HTML/PDF (data/raw/) ──[parse_minutes.py /            data/interim/*
 data/interim/{minutes,transcripts}_master.csv   (Acosta + gap-fill, joined & checked)
         │
         ▼  [build_analysis_units.py]  (ECON/POLICY section-group text, per meeting x doctype)
-data/interim/analysis_units.csv
-        │
+data/interim/analysis_units.csv ──[estimate_semantic_similarity.py]──► docs/semantic_similarity_results.csv
+        │                                                                (SBERT paraphrase-tolerant recall)
         ▼  [build_vocabulary.py]  (bigrams, frequency+breadth filtered, register/procedural excluded)
-data/interim/vocabulary.csv
-        │
+data/interim/vocabulary.csv ──[estimate_content_survival.py]──────────► docs/content_survival_results.csv
+        │                                                                (exact bigram survival rate)
         ▼  [build_count_matrix.py]  (sparse meeting x section x doctype phrase-count matrix)
-data/interim/counts.mtx
-        │
-        ├──[estimate_distinctiveness.py]──► docs/distinctiveness_results.csv (leave-out classifier)
-        └──[estimate_content_survival.py]─► docs/content_survival_results.csv (vocabulary survival rate)
+data/interim/counts.mtx ──[estimate_distinctiveness.py]────────────────► docs/distinctiveness_results.csv
+                                                                           (leave-out classifier)
 ```
 
 See `docs/data_provenance.md` for exact sources/URLs/download dates,
@@ -99,6 +99,7 @@ run src/build_count_matrix.py data/interim/analysis_units.csv data/interim/vocab
 # 6. Estimate the disclosure gap
 run src/estimate_distinctiveness.py data/interim/counts.mtx data/interim/counts_units.csv data/interim/counts_vocab.csv docs/distinctiveness_results.csv --folds 5
 run src/estimate_content_survival.py data/interim/analysis_units.csv data/interim/vocabulary.csv docs/content_survival_results.csv
+run src/estimate_semantic_similarity.py data/interim/analysis_units.csv docs/semantic_similarity_results.csv --model all-MiniLM-L6-v2 --min-words 4
 ```
 
 (Each `run src/foo.py ...` line above is exactly equivalent to `uv run
@@ -110,8 +111,10 @@ requirements.txt` into a virtualenv and calling `python3 src/foo.py
 ## Status / next steps
 
 Full pipeline (download -> parse -> calibrate/verify -> join -> vocab
--> count matrix -> estimate) is built and produces a first result --
-see `docs/findings_summary.md`. Remaining known gaps and natural next
+-> count matrix -> estimate, including an SBERT semantic-similarity
+robustness check that rules out "it's just different word choices" as
+the explanation) is built and produces a first result -- see
+`docs/findings_summary.md`. Remaining known gaps and natural next
 steps:
 
 - [ ] **2020 transcript section coding is unreliable** (pandemic-era
