@@ -11,3 +11,4 @@ data/external/*.xlsx
 data/raw/minutes/
 data/raw/minutes_calib/
 data/raw/transcripts/
+data/raw/transcripts_calib/

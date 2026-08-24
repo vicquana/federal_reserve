@@ -52,6 +52,18 @@ prepare 2019+ data in the same target schema.
 - Output: `data/raw/minutes_calib/*.htm`
 - See `docs/calibration_report.md` for the validation methodology and results.
 
+### Transcripts, 2015-01-28 through 2018-12-19 (32 meetings) — calibration sample only
+
+- Same URL pattern as the 2020 transcripts above.
+- Date list: `data/raw/transcripts_calib_dates.txt`
+- Output: `data/raw/transcripts_calib/*.pdf`
+- Downloaded to validate `src/parse_transcripts.py` (PDF text extraction,
+  speaker-turn segmentation, ECSIT/MPS section-boundary detection)
+  against Acosta's ground truth before applying it to 2020. See
+  `docs/transcript_calibration_report.md` -- section-boundary detection
+  is markedly less reliable here than the minutes parser (see that
+  report for specifics) and should be treated as provisional.
+
 All downloads used `curl`/`urllib` with a standard browser User-Agent
 header; no authentication was required (all source documents are
 public Federal Reserve materials). Per-file SHA-256 checksums are in

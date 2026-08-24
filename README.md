@@ -69,9 +69,15 @@ python3 src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.cs
       checks for date overlap, coverage gaps, unknown section codes, and duplicate keys before
       writing the join -- all checks currently pass
 - [ ] Spot-check `data/interim/minutes_gapfill_parsed.csv` (2019-2026, no ground truth available)
-- [ ] Build a transcript PDF parser (speaker-turn segmentation + ECSIT/MPS/AGGREGATES section
-      coding), calibrated the same way against Acosta's transcript section labels, then extend
-      `build_master_minutes.py`'s join-safety pattern to a `build_master_transcripts.py`
+- [x] Build a transcript PDF parser (`src/parse_transcripts.py`: PyMuPDF extraction, speaker-turn
+      segmentation, ECSIT/MPS boundary detection), calibrated against the same 32 meetings. Turn
+      segmentation is solid (0.911 mean turn-count ratio vs. Acosta); section-boundary detection
+      is weaker (18/32 meetings match Acosta on both the ECSIT and MPS start speaker) and is
+      **provisional** -- see `docs/transcript_calibration_report.md` for the specific, understood
+      failure modes before using it for section-conditional analysis
+- [ ] Decide whether to refine transcript section-boundary detection further before extending to
+      2020, or proceed with turn-level data only for now
+- [ ] Extend `build_master_minutes.py`'s join-safety pattern to a `build_master_transcripts.py`
 - [ ] Merge into a single `meeting_id / date / doctype / section / speaker / sequence / text`
       master table spanning minutes AND transcripts together
 - [ ] Vocabulary selection (frequency + breadth thresholds, procedural-phrase exclusion list)
