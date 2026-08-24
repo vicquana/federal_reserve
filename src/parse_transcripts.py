@@ -41,11 +41,19 @@ SPEAKER_RE = re.compile(
 )
 
 BRIEFING_ANCHOR_RE = re.compile(
-    # Note: title text often contains periods itself (e.g. "U.S.
-    # Outlook"), so the lookahead windows below match on character
-    # count, not "up to the next period" -- turn text is already
-    # whitespace-collapsed to one line by the time this runs.
-    r"referring to.{0,60}?(?:titled|labeled|with the cover page).{0,140}",
+    # Every staff briefing handout title observed across the 2015-2018
+    # calibration sample literally starts with the words "Material
+    # for ..." inside quotation marks (e.g. "Material for Briefing on
+    # the U.S. Outlook", "Material for the Staff Presentation on the
+    # Economic and Financial Situation", "Material for Briefing on
+    # Monetary Policy Alternatives"). The connector phrase in front of
+    # it varies a lot ("I'll be referring to the materials titled...",
+    # "I will be referring to the handout labeled...", "Our exhibits
+    # are in the packet titled...", or no connector phrase at all,
+    # just "... in front of you: 'Material for ...'"), so anchoring on
+    # the quoted title itself is far more robust than trying to match
+    # every connector-phrase variant.
+    r"[“\"]\s*Material for.{0,140}",
     re.IGNORECASE,
 )
 
@@ -115,7 +123,11 @@ def parse_one(path: str) -> list[dict]:
         turns.append({"speaker": clean_speaker(m.group(1)), "text": body})
 
     # locate the two briefing anchors (ECSIT start, MPS start) by
-    # scanning turn text in order and keyword-classifying each match
+    # scanning turn text in order and keyword-classifying each match.
+    # ECSIT and MPS are found independently (not "MPS must come after
+    # a found ECSIT") because either anchor phrase can fail to match
+    # in a given year/meeting on its own -- requiring ECSIT first
+    # would otherwise also lose an MPS match that did succeed.
     ecsit_start = None
     mps_start = None
     for i, t in enumerate(turns):
@@ -125,8 +137,14 @@ def parse_one(path: str) -> list[dict]:
         label = classify_anchor(m.group())
         if label == "ECSIT" and ecsit_start is None:
             ecsit_start = i
-        elif label == "MPS" and mps_start is None and ecsit_start is not None:
+        elif label == "MPS" and mps_start is None:
             mps_start = i
+    # MPS always follows ECSIT in the real meeting structure; if the
+    # MPS anchor happened to fire before the ECSIT one (e.g. because a
+    # special-topic turn slipped past the exclude-keyword list), treat
+    # it as spurious rather than let it truncate ECSIT.
+    if ecsit_start is not None and mps_start is not None and mps_start < ecsit_start:
+        mps_start = None
 
     rows = []
     speaker_counts: dict[str, int] = {}
