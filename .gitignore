@@ -12,6 +12,7 @@ data/raw/minutes/
 data/raw/minutes_calib/
 data/raw/transcripts/
 data/raw/transcripts_calib/
+data/raw/transcripts_2011/
 
 # Large fully-regeneratable derived intermediates (see each script's
 # docstring in src/ for the exact reproduction command). Small,

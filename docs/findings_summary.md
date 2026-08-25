@@ -1,11 +1,17 @@
 # First results: does monetary-policy deliberation get disclosed less than economic-outlook discussion?
 
-**Date:** 2026-08-24
+**Date:** 2026-08-24 (numbers refreshed after fixing a 2011 data gap -- see below)
 **Sample:** 1995-2020, the years both minutes and transcripts have
-ECON/POLICY section coding (201 meetings paired on ECON, 190 on
+ECON/POLICY section coding (198 meetings paired on both ECON and
 POLICY -- see `docs/data_provenance.md` for why section coding starts
 in 1995 and `docs/transcript_2020_section_coding_limitation.md` for
-why transcript coverage stops in 2020).
+why transcript coverage stops in 2020). Acosta's own section coding
+for all of 2011 was found to be broken (0 MPS-labeled rows the entire
+year) and was replaced with this project's own reparse of the primary
+source; see `docs/transcript_2011_override.md`. Rerunning the full
+pipeline after that fix moved every number below by less than 0.2
+percentage points, confirming the finding wasn't an artifact of the
+2011 gap.
 **Reproduce:** `src/build_analysis_units.py` -> `src/build_vocabulary.py`
 -> `src/build_count_matrix.py` -> `src/estimate_distinctiveness.py` /
 `src/estimate_content_survival.py` / `src/estimate_semantic_similarity.py`
@@ -45,12 +51,12 @@ into what was disclosed" in the first place.
 
 | Section | Mean survival rate | Interpretation |
 |---|---|---|
-| ECON (economic situation/outlook) | **8.9%** | ~1 in 11 substantive phrases spoken shows up in the minutes |
-| POLICY (monetary-policy deliberation) | **3.3%** | ~1 in 30 substantive phrases spoken shows up in the minutes |
+| ECON (economic situation/outlook) | **9.0%** | ~1 in 11 substantive phrases spoken shows up in the minutes |
+| POLICY (monetary-policy deliberation) | **3.3%** | ~1 in 31 substantive phrases spoken shows up in the minutes |
 
 **Monetary-policy deliberation survives into the public record at
 less than half the rate of economic-outlook discussion** (2.7x lower;
-approx. t-stat 40 across 190-201 paired meetings, though this simple
+approx. t-stat 42 across 198 paired meetings per section, though this simple
 two-sample comparison doesn't yet account for meeting-level
 autocorrelation over time -- treat the t-stat as a rough significance
 signal, not a publication-ready standard error).
@@ -75,11 +81,11 @@ across a meeting's transcript sentences gives a paraphrase-tolerant
 
 | Section | Mean semantic recall | Mean semantic precision |
 |---|---|---|
-| ECON | **46.4%** | 60.2% |
-| POLICY | **36.1%** | 61.2% |
+| ECON | **46.6%** | 60.2% |
+| POLICY | **36.0%** | 61.3% |
 
-**Same direction, same order of magnitude of significance** (+10.4
-points ECON over POLICY, approx. t-stat 40, 201/190 paired meetings)
+**Same direction, same order of magnitude of significance** (+10.6
+points ECON over POLICY, approx. t-stat 42, 198 paired meetings per section)
 as the exact-match content-survival result -- paraphrase tolerance
 narrows the absolute gap (as expected, since it credits reworded
 content the bigram method misses) but does not erase it. This is
@@ -104,8 +110,8 @@ the same meeting:
 
 | Section | Mean transcript words | Mean minutes words | Compression ratio |
 |---|---|---|---|
-| ECON | 25,493 | 3,917 | **6.5x** |
-| POLICY | 14,883 | 598 | **24.9x** |
+| ECON | 24,604 | 3,917 | **6.3x** |
+| POLICY | 15,180 | 598 | **25.4x** |
 
 Policy deliberation is compressed by word count nearly 4x more
 aggressively than economic-outlook discussion -- consistent with, and
@@ -137,7 +143,7 @@ assessment.**
 - Vocabulary thresholds (`--min-freq 10 --min-units 5`) were chosen as
   reasonable defaults, not tuned/validated against an outside
   criterion; worth a sensitivity check before treating exact
-  percentages (8.9%, 3.3%) as precise rather than directionally
+  percentages (9.0%, 3.3%) as precise rather than directionally
   robust.
 - `estimate_semantic_similarity.py` uses `all-MiniLM-L6-v2`, a small
   general-purpose sentence embedding model, not one fine-tuned on

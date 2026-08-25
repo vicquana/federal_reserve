@@ -10,13 +10,12 @@ deliberation).
 **Headline result so far** (`docs/findings_summary.md`): pooling
 1995-2020, the substantive vocabulary spoken during monetary-policy
 deliberation survives into the official minutes at less than half the
-rate of economic-outlook discussion (3.3% vs. 8.9% exact bigram
-survival; 36.1% vs. 46.4% paraphrase-tolerant semantic recall),
-corroborated independently by raw word-count compression (24.9x vs.
-6.5x). Three unrelated measurements agree: **monetary-policy
-deliberation is disclosed far more sparingly than economic-outlook
-discussion.** See that doc for caveats before treating this as
-publication-ready.
+rate of economic-outlook discussion (3.3% vs. 9.0% exact bigram
+survival; 36.0% vs. 46.6% paraphrase-tolerant semantic recall),
+corroborated independently by raw word-count compression. Three
+unrelated measurements agree: **monetary-policy deliberation is
+disclosed far more sparingly than economic-outlook discussion.** See
+that doc for caveats before treating this as publication-ready.
 
 ## Data pipeline
 
@@ -75,21 +74,24 @@ alias run='uv run --with-requirements requirements.txt python3'
 run src/download_fed_minutes.py --dates-file data/raw/minutes_gapfill_dates.txt --out data/raw/minutes
 run src/download_fed_minutes.py --dates-file data/raw/minutes_calib_dates.txt --out data/raw/minutes_calib
 run src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2020_stems.txt) --out data/raw/transcripts
+run src/download_fed_transcripts.py --stems $(cat data/raw/transcripts_2011_stems.txt) --out data/raw/transcripts_2011
 
 # 2. Parse raw HTML/PDF into Acosta's target schema
 run src/parse_minutes.py data/raw/minutes_calib data/interim/minutes_calib_parsed.csv
 run src/parse_minutes.py data/raw/minutes data/interim/minutes_gapfill_parsed.csv
 run src/parse_transcripts.py data/raw/transcripts_calib data/interim/transcripts_calib_parsed.csv
 run src/parse_transcripts.py data/raw/transcripts data/interim/transcripts_gapfill_parsed.csv
+run src/parse_transcripts.py data/raw/transcripts_2011 data/interim/transcripts_2011_reparsed.csv
 
 # 3. Validate parsers against Acosta's ground truth, and Acosta against the primary source
 run src/validate_minutes_calibration.py data/interim/minutes_calib_parsed.csv data/external/acosta_minutes.xlsx docs/calibration_results.csv
 run src/validate_transcripts_calibration.py data/interim/transcripts_calib_parsed.csv data/external/acosta_transcripts.xlsx docs/transcript_calibration_results.csv
 run src/verify_acosta_against_source.py data/raw/transcripts_calib data/external/acosta_transcripts.xlsx docs/transcript_source_verification.csv
 
-# 4. Join Acosta + gap-fill into continuous master tables
+# 4. Join Acosta + gap-fill/override into continuous master tables
+# (2011 overrides Acosta's own broken section coding for that year -- see docs/transcript_2011_override.md)
 run src/build_master_minutes.py data/external/acosta_minutes.xlsx data/interim/minutes_gapfill_parsed.csv data/interim/minutes_master.csv
-run src/build_master_transcripts.py data/external/acosta_transcripts.xlsx data/interim/transcripts_gapfill_parsed.csv data/interim/transcripts_master.csv
+run src/build_master_transcripts.py data/external/acosta_transcripts.xlsx data/interim/transcripts_master.csv --gapfill data/interim/transcripts_gapfill_parsed.csv data/interim/transcripts_2011_reparsed.csv
 
 # 5. Build the analysis dataset: units -> vocabulary -> count matrix
 run src/build_analysis_units.py data/interim/minutes_master.csv data/interim/transcripts_master.csv data/interim/analysis_units.csv
@@ -114,9 +116,21 @@ Full pipeline (download -> parse -> calibrate/verify -> join -> vocab
 -> count matrix -> estimate, including an SBERT semantic-similarity
 robustness check that rules out "it's just different word choices" as
 the explanation) is built and produces a first result -- see
-`docs/findings_summary.md`. Remaining known gaps and natural next
+`docs/findings_summary.md`. A qualitative spot-check tool
+(`src/inspect_semantic_matches.py`) dumps the actual sentence pairs
+behind the aggregate scores, classified as SCRIPTED (references a
+drafted document)/NEAR-VERBATIM/PARAPHRASE, for sanity-checking
+examples by hand across eras. Remaining known gaps and natural next
 steps:
 
+- [x] **2011 transcripts had zero MPS-labeled content in Acosta's own
+      data** (his section classifier appears to have mislabeled the
+      entire year) -- reparsed from the primary source with this
+      project's own calibrated parser and merged in as an override; 8/8
+      meetings now have MPS, 5/8 have ECSIT (3 remain unresolved, fail
+      safe). See `docs/transcript_2011_override.md`. Headline numbers
+      moved negligibly after the fix, confirming they weren't being
+      driven by this gap.
 - [ ] **2020 transcript section coding is unreliable** (pandemic-era
       handout-title phrasing drifted from the calibrated pattern, and
       there's no Acosta ground truth for 2020 to calibrate against) --
@@ -134,7 +148,7 @@ steps:
 - [ ] Section-group mapping (`build_analysis_units.py`) and vocabulary
       thresholds (`build_vocabulary.py`) were chosen as reasonable
       defaults, not sensitivity-tested -- worth checking how much the
-      8.9%/3.3% survival-rate numbers move under alternative choices.
+      9.0%/3.3% survival-rate numbers move under alternative choices.
 - [ ] `estimate_distinctiveness.py`'s leave-out classifier saturates at
       100% accuracy for both section groups (register alone is fully
       separable) -- it's kept as a documented negative result and a

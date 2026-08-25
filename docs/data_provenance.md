@@ -64,6 +64,19 @@ prepare 2019+ data in the same target schema.
   is markedly less reliable here than the minutes parser (see that
   report for specifics) and should be treated as provisional.
 
+### Transcripts, 2011 (8 meetings) — override for a known-bad Acosta year
+
+- Same URL pattern as above.
+- Stem list: `data/raw/transcripts_2011_stems.txt`
+- Output: `data/raw/transcripts_2011/*.pdf`
+- Downloaded because Acosta's own section coding for 2011 is broken
+  (0 MPS-labeled rows across the entire year; see
+  `docs/transcript_2011_override.md`) -- reparsed with this project's
+  own calibrated `src/parse_transcripts.py` and merged into
+  `transcripts_master.csv` as an override of Acosta's 2011 rows rather
+  than as a plain gap-fill year (`src/build_master_transcripts.py`
+  supports this via multiple `--gapfill` sources).
+
 All downloads used `curl`/`urllib` with a standard browser User-Agent
 header; no authentication was required (all source documents are
 public Federal Reserve materials). Per-file SHA-256 checksums are in

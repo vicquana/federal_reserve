@@ -69,9 +69,12 @@ BRIEFING_ANCHOR_RE = re.compile(
     # FOMC meeting..." would otherwise wrongly exclude a real MPS
     # briefing just because "communications" shows up two sentences
     # later).
+    # A third connector variant shows up in 2011 ("...behind the cover
+    # that says 'Staff Report on the Domestic Economic Situation'"),
+    # alongside titled/labeled/with the cover page.
     r"(?:[“\"]\s*Material for[^”\"]{0,140})"
     r"|(?:referring to.{0,60}?(?:titled|labeled|labelled|"
-    r"with the cover page)\s*[“\"][^”\"]{0,140})",
+    r"with the cover page|that says)\s*[“\"][^”\"]{0,140})",
     re.IGNORECASE,
 )
 
@@ -88,13 +91,24 @@ BRIEFING_ANCHOR_RE = re.compile(
 ECSIT_KEYWORDS_RE = re.compile(
     r"\b(?:u\.?s\.?|economic|domestic|international|foreign) outlook\b"
     r"|economic (?:and financial )?situation"
-    r"|financial situation",
+    r"|financial situation"
+    # 2011 sometimes retitles the quarterly SEP-projections briefing
+    # (still economic-outlook content) as "FOMC Participants' Economic
+    # Projections" or just "Forecast Summary" rather than the usual
+    # "outlook"/"situation" wording.
+    r"|economic projections"
+    r"|forecast summary",
     re.IGNORECASE,
 )
 MPS_KEYWORDS_RE = re.compile(r"monetary policy", re.IGNORECASE)
 EXCLUDE_KEYWORDS_RE = re.compile(
     r"options|framework|strategy|communications?|revisions?|"
-    r"authorization|tools|proposed|update|gross domestic product",
+    r"authorization|tools|proposed|update|gross domestic product|"
+    # "Potential Enhancements to the Summary of Economic Projections"
+    # is a special-topic memo about the SEP *process*, not the
+    # quarterly SEP-projections briefing itself, but shares the words
+    # "economic projections" with the real one -- exclude it by name.
+    r"enhancements?",
     re.IGNORECASE,
 )
 

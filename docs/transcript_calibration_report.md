@@ -106,14 +106,20 @@ session's fixes) to 30/32, and "at least one anchor matches" to 32/32
    ALL-CAPS speaker label, handling the glued-footnote-digit case
    above.
 3. **Section boundary (ECSIT/MPS) detection**: match the handout-title
-   quote per the anchor patterns above, classify the quoted title text
+   quote per the anchor patterns above (connector words: `titled` /
+   `labeled` / `labelled` / `with the cover page` / `that says` --
+   the last one added while fixing 2011, see
+   `docs/transcript_2011_override.md`), classify the quoted title text
    by keyword (`monetary policy` -> MPS candidate; `<x> outlook` /
-   `economic (and financial) situation` / `financial situation` ->
-   ECSIT candidate; `options`/`framework`/`strategy`/
-   `communications`/`revisions`/`authorization`/`tools`/`proposed`/
-   `update`/`gross domestic product` in the title -> excluded, rules
-   out one-off special-topic memos that happen to also mention
-   "monetary policy" or "domestic" in their own title), then resolve
+   `economic (and financial) situation` / `financial situation` /
+   `economic projections` / `forecast summary` -> ECSIT candidate --
+   the last two also added for 2011, where the quarterly
+   SEP-projections briefing uses different title words entirely;
+   `options`/`framework`/`strategy`/`communications`/`revisions`/
+   `authorization`/`tools`/`proposed`/`update`/`gross domestic
+   product`/`enhancements` in the title -> excluded, rules out one-off
+   special-topic memos that happen to also mention "monetary policy",
+   "domestic", or "economic projections" in their own title), then resolve
    ECSIT/MPS start positions as described in fix 2 above. Everything
    from ECSIT-start to just before MPS-start is labeled ECSIT;
    everything from MPS-start onward is labeled MPS (matching Acosta's
@@ -121,15 +127,22 @@ session's fixes) to 30/32, and "at least one anchor matches" to 32/32
 
 ## Remaining cases (2 of 32)
 
-1. **2015-06-17 (neither anchor found).** The ECSIT presenter
-   (Follette) launches straight into content -- "Thank you, Madam
-   Chair. As you know, the recent spending data have been
+1. **2015-06-17 (ECSIT anchor now lands on Tetlow, not Follette --
+   updated after the 2011 fixes below).** The canonical ECSIT
+   presenter (Follette) launches straight into content -- "Thank you,
+   Madam Chair. As you know, the recent spending data have been
    disappointing..." -- without ever stating the handout's title in
-   speech. No phrase-based anchor can catch this; it would need a
-   structural fallback (e.g. the Chair's preceding transition line, or
-   position/proximity to the reliably-found MPS anchor) to resolve.
-   Fails safe: the meeting gets 0 ECSIT/MPS rows rather than a wrong
-   label.
+   speech, so no phrase-based anchor can catch her turn specifically.
+   Adding the `economic projections` keyword (for 2011, see below) had
+   a side effect here: it now catches Tetlow's quarterly
+   SEP-projections briefing ("Materials for Briefing on the Summary of
+   Economic Projections"), which genuinely is ECSIT-category content
+   presented at the same meeting, just not Acosta's canonical first
+   speaker. Net effect: this meeting went from 0 ECSIT rows (safe
+   fail) to 77 of 96 true ECSIT rows captured (real improvement) at
+   the cost of the strict first-speaker-match metric. A true
+   structural fallback (e.g. the Chair's preceding transition line)
+   would still be needed to catch Follette's own turn specifically.
 2. **2015-04-29 (ECSIT anchor lands on Kamin instead of Wascher).**
    This one is *not* a parsing bug: `docs/transcript_source_verification.csv`
    `-style manual inspection shows Wascher's real opening turn
