@@ -50,6 +50,35 @@ PDFs directly, `docs/transcript_2020_section_coding_limitation.md` for
 the one still-open data-quality gap, and `docs/REFERENCES.md` for full
 citations.
 
+### Related module: SEP dot-plot forecast accuracy
+
+A separate, self-contained sub-analysis (no dependency on the
+minutes/transcripts pipeline above) measuring how accurate the FOMC's
+own quarterly "dot plot" federal funds rate projections have been
+against what actually happened:
+
+```text
+federalreserve.gov SEP PDFs (quarterly) ──[parse_sep_dotplot.py]──► data/interim/sep_dotplot.csv
+federalreserve.gov H.15 release (realized rate) ──[download_fed_funds_rate.py]──► data/raw/fedfunds_monthly.csv
+                                                                              │
+                                            [estimate_dotplot_accuracy.py] ──┘
+                                                        │
+                                            docs/dotplot_accuracy_results.csv
+```
+
+**Result** (`docs/dotplot_accuracy_findings.md`): mean absolute error
+grows from 0.25 percentage points at 0 years out to 2.16pp at 3 years
+out, with longer-horizon projections systematically biased toward
+*underestimating* the eventual rate. The 10 worst individual
+forecasts are all 2020-2021 SEP releases projecting near-zero rates
+for 2022-2023 that actually landed at 4.1-5.3% -- this project's own
+direct measurement of the well-documented pandemic-era forecasting
+miss. The pattern (accuracy degrading with horizon) holds even
+excluding 2020-2021 entirely, just at smaller magnitude. See that doc
+for scope gaps (pre-September-2015 releases used a different PDF
+table format without a median/fed-funds-rate row and are out of scope
+for now; one release, 2017-06-14, could not be parsed at all).
+
 ## Repository layout
 
 ```text
@@ -102,6 +131,12 @@ run src/build_count_matrix.py data/interim/analysis_units.csv data/interim/vocab
 run src/estimate_distinctiveness.py data/interim/counts.mtx data/interim/counts_units.csv data/interim/counts_vocab.csv docs/distinctiveness_results.csv --folds 5
 run src/estimate_content_survival.py data/interim/analysis_units.csv data/interim/vocabulary.csv docs/content_survival_results.csv
 run src/estimate_semantic_similarity.py data/interim/analysis_units.csv docs/semantic_similarity_results.csv --model all-MiniLM-L6-v2 --min-words 4
+
+# 7. (Separate module) SEP dot-plot forecast accuracy
+run src/download_sep.py --dates-file data/raw/sep_dates.txt --out data/raw/sep
+run src/download_fed_funds_rate.py data/raw/fedfunds_monthly.csv
+run src/parse_sep_dotplot.py data/raw/sep data/interim/sep_dotplot.csv
+run src/estimate_dotplot_accuracy.py data/interim/sep_dotplot.csv data/raw/fedfunds_monthly.csv docs/dotplot_accuracy_results.csv
 ```
 
 (Each `run src/foo.py ...` line above is exactly equivalent to `uv run
@@ -156,3 +191,11 @@ steps:
       comparison metric; a topic-content-only vocabulary (e.g. a curated
       economic/policy lexicon) might avoid the ceiling if that
       comparison is still wanted.
+- [x] **SEP dot-plot forecast accuracy** (separate module, no
+      dependency on the text pipeline): built and produces a result --
+      see `docs/dotplot_accuracy_findings.md`. Pre-September-2015 SEP
+      releases are out of scope (different, median-less PDF table
+      format); a natural next step is testing whether transcript/minutes
+      text features from the same meeting (disagreement, hedging
+      language) predict which SEP releases turn out to have the largest
+      subsequent forecast error -- this would connect the two modules.

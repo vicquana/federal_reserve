@@ -22,6 +22,13 @@ extend Acosta's coverage to 2019-2026 (minutes) and 2020 (transcripts).
 Exact URLs, date ranges, and checksums are in
 `docs/data_provenance.md`.
 
+**Board of Governors of the Federal Reserve System.** Summary of
+Economic Projections (SEP), quarterly, federalreserve.gov, and H.15
+Selected Interest Rates (effective federal funds rate), also Board of
+Governors. Downloaded 2026-09-01 for the dot-plot forecast-accuracy
+analysis in `docs/dotplot_accuracy_findings.md`; see that doc for
+exact sources, date ranges, and known scope gaps.
+
 ## Methodology references
 
 **Gentzkow, Matthew, and Jesse M. Shapiro. 2010.** "What Drives Media
@@ -62,6 +69,21 @@ Content of FOMC Minutes." Federal Reserve Bank of New York working
 paper (SSRN 922312). — Earliest direct transcript-vs-minutes content
 comparison (Latent Semantic Analysis / cosine similarity); motivates
 this project's question in a pre-Gentzkow-Shapiro-Taddy framework.
+
+**Engstrom, Eric.** "Anchored to the Dot Plot: Central Bank Projections
+and Interest Rate Expectations." Federal Reserve Board FEDS working
+paper. https://www.federalreserve.gov/econres/feds/anchored-to-the-dot-plot-central-bank-projections-and-interest-rate-expectations.htm
+— Finds the SEP dot plot has lower forecast error than private-sector
+consensus surveys at many horizons, but also anchors/slows private
+forecasters' updating; cited in `docs/dotplot_accuracy_findings.md`.
+
+**Federal Reserve Bank of Chicago. 2025.** "Forecasting inflation
+during the pandemic: Who got it right?" *Chicago Fed Letter*,
+No. 513. https://www.chicagofed.org/publications/chicago-fed-letter/2025/513
+— Documents 2020-24 SEP forecast errors running roughly 3x larger
+than the pre-pandemic period; cited alongside this project's own
+independent measurement of the same episode in
+`docs/dotplot_accuracy_findings.md`.
 
 ## Citing this repository
 
